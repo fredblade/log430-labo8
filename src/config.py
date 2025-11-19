@@ -26,6 +26,8 @@ KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID")
 KAFKA_AUTO_OFFSET_RESET = os.getenv("KAFKA_AUTO_OFFSET_RESET")
 LOG_LEVEL = os.getenv("LOG_LEVEL")
 
+API_GATEWAY_URL = os.getenv("API_GATEWAY_URL")
+
 for env_variable in ["DB_HOST", "DB_PORT","DB_NAME","DB_USER","DB_PASSWORD","REDIS_HOST","REDIS_PORT","REDIS_DB","KAFKA_HOST", "KAFKA_TOPIC", "KAFKA_GROUP_ID", "KAFKA_AUTO_OFFSET_RESET", "LOG_LEVEL"]:
     if globals()[env_variable] is None:
         raise EnvironmentError(f"Variable {env_variable} n'était pas trouvé dans votre fichier .env.")

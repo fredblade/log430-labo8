@@ -7,6 +7,10 @@ from typing import Dict, Any
 import config
 from event_management.base_handler import EventHandler
 from orders.commands.order_event_producer import OrderEventProducer
+from db import get_sqlalchemy_session
+from payments.models.outbox import Outbox
+from payments.outbox_processor import OutboxProcessor
+from stocks.commands.write_stock import check_out_items_from_stock
 
 
 class StockDecreasedHandler(EventHandler):
@@ -34,13 +38,22 @@ class StockDecreasedHandler(EventHandler):
         dans l'API Payments et non dans Store Manager, car c'est l'API Payments qui doit 
         être notifiée de la mise à jour du stock afin de générer une transaction de paiement.
         '''
-        try:
-            # Si la transaction de paiement a été crée, déclenchez PaymentCreated.
-            event_data['event'] = "PaymentCreated"
-            self.logger.debug(f"payment_link={event_data['payment_link']}")
-            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
+        session = get_sqlalchemy_session()
+        try: 
+            new_outbox_item = Outbox(order_id=event_data['order_id'], 
+                                    user_id=event_data['user_id'], 
+                                    total_amount=event_data['total_amount'],
+                                    order_items=event_data['order_items'])
+            session.add(new_outbox_item)
+            session.flush() 
+            session.commit()
+            OutboxProcessor().run(new_outbox_item)
         except Exception as e:
-            # TODO: Si la transaction de paiement n'était pas crée, déclenchez l'événement adéquat selon le diagramme.
+            session.rollback()
+            self.logger.debug("La création d'une transaction de paiement a échoué : " + str(e))
+            event_data['event'] = "PaymentCreationFailed"
             event_data['error'] = str(e)
-
+            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
+        finally:
+            session.close()
 

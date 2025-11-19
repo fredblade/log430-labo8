@@ -39,6 +39,10 @@ def test_saga(client):
     logger.debug(f"Created order with ID: {order_id}")
     
     # 2. Check if order really exists and whether it has a payment link
+    # Give the asynchronous saga time to complete (Kafka consumer has startup delay)
+    import time
+    time.sleep(20)
+
     response = client.get(f'/orders/{order_id}')
     assert response.status_code == 201, f"Failed to get order: {response.get_json()}"
     response = response.get_json()

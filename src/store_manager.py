@@ -51,6 +51,13 @@ consumer_service = OrderEventConsumer(
 )
 consumer_service.start()
 
+from payments.outbox_processor import OutboxProcessor
+
+# il faut éxécuter le processeur seulement 1 fois à chaque initialisation
+is_outbox_processor_running = False
+if not is_outbox_processor_running:
+   OutboxProcessor().run()
+   is_outbox_processor_running = True
 @app.get('/health-check')
 def health():
     """Return OK if app is up and running"""
